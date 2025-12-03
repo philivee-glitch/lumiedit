@@ -60,3 +60,21 @@ class ExportImageEvent extends EditorEvent {
   @override
   List<Object?> get props => [quality];
 }
+
+class CropImageEvent extends EditorEvent {
+  final String croppedPath;
+
+  const CropImageEvent(this.croppedPath);
+
+  @override
+  List<Object?> get props => [croppedPath];
+}
+
+class RotateImageEvent extends EditorEvent {
+  final int degrees;
+
+  const RotateImageEvent(this.degrees);
+
+  @override
+  List<Object?> get props => [degrees];
+}

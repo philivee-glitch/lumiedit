@@ -10,6 +10,31 @@ class ProcessingParams {
   final ImageAdjustments adjustments;
 
   ProcessingParams(this.imageBytes, this.adjustments);
+
+  static Future<Uint8List> rotateImage(Uint8List imageBytes, int degrees) async {
+    final image = img.decodeImage(imageBytes);
+    if (image == null) return imageBytes;
+    
+    img.Image rotated;
+    switch (degrees % 360) {
+      case 90:
+      case -270:
+        rotated = img.copyRotate(image, angle: 90);
+        break;
+      case 180:
+      case -180:
+        rotated = img.copyRotate(image, angle: 180);
+        break;
+      case 270:
+      case -90:
+        rotated = img.copyRotate(image, angle: 270);
+        break;
+      default:
+        rotated = image;
+    }
+    
+    return Uint8List.fromList(img.encodeJpg(rotated, quality: 95));
+  }
 }
 
 class ImageProcessor {
@@ -527,5 +552,30 @@ class ImageProcessor {
         }
         return src;
     }
+  }
+
+  static Future<Uint8List> rotateImage(Uint8List imageBytes, int degrees) async {
+    final image = img.decodeImage(imageBytes);
+    if (image == null) return imageBytes;
+    
+    img.Image rotated;
+    switch (degrees % 360) {
+      case 90:
+      case -270:
+        rotated = img.copyRotate(image, angle: 90);
+        break;
+      case 180:
+      case -180:
+        rotated = img.copyRotate(image, angle: 180);
+        break;
+      case 270:
+      case -90:
+        rotated = img.copyRotate(image, angle: 270);
+        break;
+      default:
+        rotated = image;
+    }
+    
+    return Uint8List.fromList(img.encodeJpg(rotated, quality: 95));
   }
 }

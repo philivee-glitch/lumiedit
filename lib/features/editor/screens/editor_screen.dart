@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_cropper/image_cropper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/editor_constants.dart';
 import '../bloc/editor_bloc.dart';
@@ -606,25 +607,98 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildCropPanel(BuildContext context, EditorState state) {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildCropButton(
+            icon: Icons.crop_rounded,
+            label: 'Crop',
+            onTap: () => _openCropper(context, state),
+          ),
+          _buildCropButton(
+            icon: Icons.rotate_left_rounded,
+            label: 'Rotate Left',
+            onTap: () => context.read<EditorBloc>().add(const RotateImageEvent(-90)),
+          ),
+          _buildCropButton(
+            icon: Icons.rotate_right_rounded,
+            label: 'Rotate Right',
+            onTap: () => context.read<EditorBloc>().add(const RotateImageEvent(90)),
+          ),
+          _buildCropButton(
+            icon: Icons.flip_rounded,
+            label: 'Flip H',
+            onTap: () => _flipImage(context, state, horizontal: true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCropButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceLight.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(16),
+          color: AppTheme.surfaceLight,
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.construction_rounded, color: AppTheme.primaryOrange, size: 24),
-            const SizedBox(width: 12),
-            Text(
-              'Crop & Rotate coming soon!',
-              style: AppTheme.bodyMedium.copyWith(color: AppTheme.textSecondary),
-            ),
+            Icon(icon, color: AppTheme.primaryOrange, size: 28),
+            const SizedBox(height: 6),
+            Text(label, style: AppTheme.labelSmall),
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _openCropper(BuildContext context, EditorState state) async {
+    if (state.imagePath == null) return;
+    
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: state.imagePath!,
+      uiSettings: [
+        IOSUiSettings(
+          title: 'Crop Image',
+          aspectRatioLockEnabled: false,
+          resetAspectRatioEnabled: true,
+          aspectRatioPickerButtonHidden: false,
+          rotateButtonsHidden: true,
+          rotateClockwiseButtonHidden: true,
+        ),
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Image',
+          toolbarColor: AppTheme.backgroundDark,
+          toolbarWidgetColor: AppTheme.textPrimary,
+          backgroundColor: AppTheme.backgroundDark,
+          activeControlsWidgetColor: AppTheme.primaryOrange,
+          initAspectRatio: CropAspectRatioPreset.original,
+          lockAspectRatio: false,
+        ),
+      ],
+    );
+
+    if (croppedFile != null && context.mounted) {
+      context.read<EditorBloc>().add(CropImageEvent(croppedFile.path));
+    }
+  }
+
+  Future<void> _flipImage(BuildContext context, EditorState state, {required bool horizontal}) async {
+    // Flip will be handled via ImageProcessor
+    if (state.imageBytes == null) return;
+    // For now, show a message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Flip coming soon!'), duration: Duration(seconds: 1)),
     );
   }
 

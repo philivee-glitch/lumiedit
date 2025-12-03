@@ -27,6 +27,8 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     on<ToggleCompareEvent>(_onToggleCompare);
     on<SaveImageEvent>(_onSaveImage);
     on<ExportImageEvent>(_onExportImage);
+    on<CropImageEvent>(_onCropImage);
+    on<RotateImageEvent>(_onRotateImage);
   }
 
   @override
@@ -394,6 +396,52 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
           errorMessage: 'Failed to process image: $e',
         ));
       }
+    }
+  }
+
+  Future<void> _onCropImage(
+    CropImageEvent event,
+    Emitter<EditorState> emit,
+  ) async {
+    emit(state.copyWith(status: EditorStatus.processing));
+    try {
+      final file = File(event.croppedPath);
+      final bytes = await file.readAsBytes();
+      emit(state.copyWith(
+        status: EditorStatus.loaded,
+        imagePath: event.croppedPath,
+        imageBytes: bytes,
+        processedImageBytes: bytes,
+        adjustments: const ImageAdjustments(),
+        history: [const ImageAdjustments()],
+        historyIndex: 0,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: EditorStatus.error,
+        errorMessage: 'Failed to crop image: $e',
+      ));
+    }
+  }
+
+  Future<void> _onRotateImage(
+    RotateImageEvent event,
+    Emitter<EditorState> emit,
+  ) async {
+    if (state.imageBytes == null) return;
+    emit(state.copyWith(status: EditorStatus.processing));
+    try {
+      final rotatedBytes = await ImageProcessor.rotateImage(state.imageBytes!, event.degrees);
+      emit(state.copyWith(
+        status: EditorStatus.loaded,
+        imageBytes: rotatedBytes,
+        processedImageBytes: rotatedBytes,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: EditorStatus.error,
+        errorMessage: 'Failed to rotate image: $e',
+      ));
     }
   }
 }
