@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_cropper/image_cropper.dart';
-import 'package:image_cropper/image_cropper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/editor_constants.dart';
 import '../bloc/editor_bloc.dart';

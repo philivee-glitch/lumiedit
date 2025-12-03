@@ -100,11 +100,8 @@ class ImageProcessor {
     }
     
     // Beauty adjustments
-    if (adjustments.skinSmooth > 0) {
-      image = _applySkinSmoothing(image, adjustments.skinSmooth);
-    }
-    if (adjustments.blemishRemoval > 0) {
-      image = _applyBlemishRemoval(image, adjustments.blemishRemoval);
+    if (adjustments.skinSmooth > 0 || adjustments.blemishRemoval > 0) {
+      image = _applyBeautyFilter(image, adjustments.skinSmooth, adjustments.blemishRemoval);
     }
     if (adjustments.skinTone > 0) {
       image = _applySkinTone(image, adjustments.skinTone);
@@ -440,6 +437,61 @@ class ImageProcessor {
     return src;
   }
 
+
+  static img.Image _applyBeautyFilter(img.Image src, double smoothIntensity, double blemishIntensity) {
+    if (smoothIntensity <= 0 && blemishIntensity <= 0) return src;
+    
+    final blurRadius = 15;
+    final blurred = img.gaussianBlur(img.Image.from(src), radius: blurRadius);
+    final blend = ((smoothIntensity + blemishIntensity) / 100 * 0.85).clamp(0.0, 0.95);
+    
+    for (int y = 0; y < src.height; y++) {
+      for (int x = 0; x < src.width; x++) {
+        final pixel = src.getPixel(x, y);
+        final blur = blurred.getPixel(x, y);
+        
+        final r = pixel.r.toDouble();
+        final g = pixel.g.toDouble();
+        final b = pixel.b.toDouble();
+        final lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        
+        // Skip very dark and very bright areas
+        if (lum < 50 || lum > 235) continue;
+        
+        // Skip non-skin
+        if (r < g || r < b) continue;
+        
+        // Skip high contrast edges
+        double maxDiff = 0;
+        if (x > 0 && x < src.width - 1 && y > 0 && y < src.height - 1) {
+          for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+              if (dx == 0 && dy == 0) continue;
+              final n = src.getPixel(x + dx, y + dy);
+              final nLum = 0.299 * n.r + 0.587 * n.g + 0.114 * n.b;
+              final diff = (lum - nLum).abs();
+              if (diff > maxDiff) maxDiff = diff;
+            }
+          }
+        }
+        if (maxDiff > 35) continue;
+        
+        final finalR = r * (1 - blend) + blur.r * blend;
+        final finalG = g * (1 - blend) + blur.g * blend;
+        final finalB = b * (1 - blend) + blur.b * blend;
+        
+        src.setPixelRgba(
+          x, y,
+          finalR.round().clamp(0, 255),
+          finalG.round().clamp(0, 255),
+          finalB.round().clamp(0, 255),
+          pixel.a.toInt(),
+        );
+      }
+    }
+    
+    return src;
+  }
   static img.Image _applySkinTone(img.Image src, double intensity) {
     final strength = intensity / 100 * 0.25;
     

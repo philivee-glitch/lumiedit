@@ -158,7 +158,7 @@ class ImageAdjustments extends Equatable {
     warmth: 5,
     exposure: 5,
     highlights: -10,
-    shadows: 20,
+    shadows: -20,
     sharpness: 15,
   );
 
@@ -180,7 +180,7 @@ class ImageAdjustments extends Equatable {
     warmth: 5,
     exposure: 5,
     highlights: -10,
-    shadows: 20,
+    shadows: -20,
     sharpness: 10,
     skinSmooth: 40,
     blemishRemoval: 50,

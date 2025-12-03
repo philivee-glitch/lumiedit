@@ -1,4 +1,35 @@
 PODS:
+  - DartCvIOS (4.12.0.2):
+    - DartCvIOS/calib3d (= 4.12.0.2)
+    - DartCvIOS/contrib (= 4.12.0.2)
+    - DartCvIOS/core (= 4.12.0.2)
+    - DartCvIOS/features2d (= 4.12.0.2)
+    - DartCvIOS/imgproc (= 4.12.0.2)
+    - DartCvIOS/objdetect (= 4.12.0.2)
+    - DartCvIOS/photo (= 4.12.0.2)
+    - DartCvIOS/stitching (= 4.12.0.2)
+    - DartCvIOS/video (= 4.12.0.2)
+  - DartCvIOS/calib3d (4.12.0.2):
+    - DartCvIOS/core
+  - DartCvIOS/contrib (4.12.0.2):
+    - DartCvIOS/core
+  - DartCvIOS/core (4.12.0.2)
+  - DartCvIOS/dnn (4.12.0.2):
+    - DartCvIOS/core
+  - DartCvIOS/features2d (4.12.0.2):
+    - DartCvIOS/core
+  - DartCvIOS/imgproc (4.12.0.2):
+    - DartCvIOS/core
+  - DartCvIOS/objdetect (4.12.0.2):
+    - DartCvIOS/core
+  - DartCvIOS/photo (4.12.0.2):
+    - DartCvIOS/core
+  - DartCvIOS/stitching (4.12.0.2):
+    - DartCvIOS/core
+  - DartCvIOS/video (4.12.0.2):
+    - DartCvIOS/core
+  - DartCvIOS/videoio (4.12.0.2):
+    - DartCvIOS/core
   - Flutter (1.0.0)
   - image_cropper (0.0.4):
     - Flutter
@@ -6,6 +37,11 @@ PODS:
   - image_gallery_saver (2.0.2):
     - Flutter
   - image_picker_ios (0.0.1):
+    - Flutter
+  - opencv_dart (0.0.1):
+    - DartCvIOS (= 4.12.0.2)
+    - DartCvIOS/dnn (= 4.12.0.2)
+    - DartCvIOS/videoio (= 4.12.0.2)
     - Flutter
   - path_provider_foundation (0.0.1):
     - Flutter
@@ -24,6 +60,7 @@ DEPENDENCIES:
   - image_cropper (from `.symlinks/plugins/image_cropper/ios`)
   - image_gallery_saver (from `.symlinks/plugins/image_gallery_saver/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
+  - opencv_dart (from `.symlinks/plugins/opencv_dart/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
@@ -31,6 +68,7 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - DartCvIOS
     - TOCropViewController
 
 EXTERNAL SOURCES:
@@ -42,6 +80,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/image_gallery_saver/ios"
   image_picker_ios:
     :path: ".symlinks/plugins/image_picker_ios/ios"
+  opencv_dart:
+    :path: ".symlinks/plugins/opencv_dart/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
   permission_handler_apple:
@@ -52,10 +92,12 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
 
 SPEC CHECKSUMS:
+  DartCvIOS: 31615ff863f0fc709aee9b93dc3afa3500d35ba7
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   image_cropper: 64567491beea6cd1bc4b11948e2babb590de5826
   image_gallery_saver: 14711d79da40581063e8842a11acf1969d781ed7
   image_picker_ios: e0ece4aa2a75771a7de3fa735d26d90817041326
+  opencv_dart: 71fc6f2ae1f9feb2f143eeee32823f3dc492ab47
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
