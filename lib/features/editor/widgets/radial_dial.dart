@@ -105,7 +105,7 @@ class _RadialDialState extends State<RadialDial> with SingleTickerProviderStateM
         return GestureDetector(
           onTap: widget.onClose,
           child: Container(
-            color: Colors.black.withOpacity(0.6 * _fadeAnimation.value),
+            color: Colors.black.withOpacity(0.2 * _fadeAnimation.value),
             child: child,
           ),
         );
@@ -117,7 +117,7 @@ class _RadialDialState extends State<RadialDial> with SingleTickerProviderStateM
             animation: _slideAnimation,
             builder: (context, child) {
               return Positioned(
-                bottom: 60 + _slideAnimation.value,
+                bottom: 20 + _slideAnimation.value,
                 left: (screenSize.width - dialSize) / 2,
                 child: child!,
               );
@@ -208,7 +208,7 @@ class _RadialDialState extends State<RadialDial> with SingleTickerProviderStateM
             animation: _slideAnimation,
             builder: (context, child) {
               return Positioned(
-                bottom: 280 + _slideAnimation.value,
+                bottom: 20 + _slideAnimation.value,
                 left: 0,
                 right: 0,
                 child: Opacity(

@@ -29,6 +29,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     on<ExportImageEvent>(_onExportImage);
     on<CropImageEvent>(_onCropImage);
     on<RotateImageEvent>(_onRotateImage);
+    on<FlipImageEvent>(_onFlipImage);
   }
 
   @override
@@ -441,6 +442,27 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       emit(state.copyWith(
         status: EditorStatus.error,
         errorMessage: 'Failed to rotate image: $e',
+      ));
+    }
+  }
+
+  Future<void> _onFlipImage(
+    FlipImageEvent event,
+    Emitter<EditorState> emit,
+  ) async {
+    if (state.imageBytes == null) return;
+    emit(state.copyWith(status: EditorStatus.processing));
+    try {
+      final flippedBytes = await ImageProcessor.flipImage(state.imageBytes!, horizontal: event.horizontal);
+      emit(state.copyWith(
+        status: EditorStatus.loaded,
+        imageBytes: flippedBytes,
+        processedImageBytes: flippedBytes,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: EditorStatus.error,
+        errorMessage: 'Failed to flip image: $e',
       ));
     }
   }

@@ -35,6 +35,17 @@ class ProcessingParams {
     
     return Uint8List.fromList(img.encodeJpg(rotated, quality: 95));
   }
+
+  static Future<Uint8List> flipImage(Uint8List imageBytes, {required bool horizontal}) async {
+    final image = img.decodeImage(imageBytes);
+    if (image == null) return imageBytes;
+    
+    final flipped = horizontal 
+        ? img.flipHorizontal(image) 
+        : img.flipVertical(image);
+    
+    return Uint8List.fromList(img.encodeJpg(flipped, quality: 95));
+  }
 }
 
 class ImageProcessor {
@@ -207,7 +218,7 @@ class ImageProcessor {
   }
 
   static img.Image _applyHighlights(img.Image src, double value) {
-    final adj = value / 100 * 60;
+    final adj = -value / 100 * 60;
     
     for (int y = 0; y < src.height; y++) {
       for (int x = 0; x < src.width; x++) {
@@ -230,7 +241,7 @@ class ImageProcessor {
   }
 
   static img.Image _applyShadows(img.Image src, double value) {
-    final adj = value / 100 * 60;
+    final adj = -value / 100 * 60;
     
     for (int y = 0; y < src.height; y++) {
       for (int x = 0; x < src.width; x++) {
@@ -577,5 +588,16 @@ class ImageProcessor {
     }
     
     return Uint8List.fromList(img.encodeJpg(rotated, quality: 95));
+  }
+
+  static Future<Uint8List> flipImage(Uint8List imageBytes, {required bool horizontal}) async {
+    final image = img.decodeImage(imageBytes);
+    if (image == null) return imageBytes;
+    
+    final flipped = horizontal 
+        ? img.flipHorizontal(image) 
+        : img.flipVertical(image);
+    
+    return Uint8List.fromList(img.encodeJpg(flipped, quality: 95));
   }
 }

@@ -78,3 +78,12 @@ class RotateImageEvent extends EditorEvent {
   @override
   List<Object?> get props => [degrees];
 }
+
+class FlipImageEvent extends EditorEvent {
+  final bool horizontal;
+
+  const FlipImageEvent({required this.horizontal});
+
+  @override
+  List<Object?> get props => [horizontal];
+}

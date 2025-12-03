@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_cropper/image_cropper.dart';
+import 'package:image_cropper/image_cropper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/editor_constants.dart';
 import '../bloc/editor_bloc.dart';
 import '../bloc/editor_event.dart';
 import '../bloc/editor_state.dart';
-import '../widgets/radial_dial.dart';
+import '../widgets/adjustment_slider.dart';
 import '../widgets/adjustment_button.dart';
 import '../widgets/filter_preview.dart';
 import '../widgets/ai_magic_button.dart';
@@ -185,28 +186,56 @@ class _EditorScreenState extends State<EditorScreen> {
               Text('LumiEdit', style: AppTheme.headlineMedium),
             ],
           ),
-          GestureDetector(
-            onTap: state.hasChanges
-                ? () {
-                    HapticFeedback.mediumImpact();
-                    context.read<EditorBloc>().add(ResetAdjustmentsEvent());
-                  }
-                : null,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppTheme.textPrimary.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: state.canUndo
+                    ? () {
+                        HapticFeedback.mediumImpact();
+                        context.read<EditorBloc>().add(UndoEvent());
+                      }
+                    : null,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.textPrimary.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.undo_rounded,
+                    color: state.canUndo
+                        ? AppTheme.textSecondary
+                        : AppTheme.textTertiary.withOpacity(0.3),
+                    size: 20,
+                  ),
+                ),
               ),
-              child: Icon(
-                Icons.refresh_rounded,
-                color: state.hasChanges
-                    ? AppTheme.textSecondary
-                    : AppTheme.textTertiary.withOpacity(0.3),
-                size: 20,
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: state.canRedo
+                    ? () {
+                        HapticFeedback.mediumImpact();
+                        context.read<EditorBloc>().add(RedoEvent());
+                      }
+                    : null,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.textPrimary.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.redo_rounded,
+                    color: state.canRedo
+                        ? AppTheme.textSecondary
+                        : AppTheme.textTertiary.withOpacity(0.3),
+                    size: 20,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -337,7 +366,11 @@ class _EditorScreenState extends State<EditorScreen> {
           ),
 
         if (_showRadialDial && _activeAdjustment != null)
-          RadialDial(
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: AdjustmentSlider(
             label: _activeAdjustment!.label,
             value: state.adjustments.getValue(_activeAdjustment!),
             minValue: _activeAdjustment!.minValue,
@@ -353,6 +386,7 @@ class _EditorScreenState extends State<EditorScreen> {
                 _activeAdjustment = null;
               });
             },
+          ),
           ),
 
         if (state.isAIMagicProcessing)
@@ -694,12 +728,8 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Future<void> _flipImage(BuildContext context, EditorState state, {required bool horizontal}) async {
-    // Flip will be handled via ImageProcessor
     if (state.imageBytes == null) return;
-    // For now, show a message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Flip coming soon!'), duration: Duration(seconds: 1)),
-    );
+    context.read<EditorBloc>().add(FlipImageEvent(horizontal: horizontal));
   }
 
   Widget _buildActionBar(BuildContext context, EditorState state) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../editor/screens/editor_screen.dart';
+import '../../settings/screens/settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -19,6 +20,7 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               children: [
+                _buildTopBar(context),
                 const Spacer(flex: 2),
                 _buildHeader(),
                 const Spacer(flex: 1),
@@ -330,6 +332,25 @@ class HomeScreen extends StatelessWidget {
             fontSize: 11,
             fontWeight: FontWeight.w500,
             color: AppTheme.textTertiary.withOpacity(0.4),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTopBar(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        IconButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SettingsScreen()),
+          ),
+          icon: const Icon(
+            Icons.settings_rounded,
+            color: AppTheme.textSecondary,
+            size: 26,
           ),
         ),
       ],
