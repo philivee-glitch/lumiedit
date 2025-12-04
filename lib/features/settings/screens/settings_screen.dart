@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../widgets/settings_tile.dart';
 import 'legal_screen.dart';
+import 'help_screen.dart';
 import 'premium_screen.dart';
 import '../../../core/services/purchase_service.dart';
 
@@ -91,7 +92,7 @@ class SettingsScreen extends StatelessWidget {
                 SettingsTile(
                   icon: Icons.help_outline_rounded,
                   title: 'Help & FAQ',
-                  onTap: () => _openHelp(),
+                  onTap: () => _openHelp(context),
                 ),
                 SettingsTile(
                   icon: Icons.email_outlined,
@@ -160,11 +161,11 @@ class SettingsScreen extends StatelessWidget {
     // Will implement with share_plus package
   }
 
-  Future<void> _openHelp() async {
-    final url = Uri.parse('https://codenestle.com/lumiedit/help');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
+  void _openHelp(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const HelpScreen()),
+    );
   }
 
   Future<void> _contactSupport() async {
