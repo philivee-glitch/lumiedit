@@ -123,7 +123,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     _debounceTimer?.cancel();
     
     // Debounce the actual image processing
-    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 150), () {
       if (!isClosed && !_isProcessing) {
         _processImageDebounced(newAdjustments);
       }

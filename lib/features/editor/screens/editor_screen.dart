@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../../../core/services/ad_service.dart';
+import '../../../core/services/purchase_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_cropper/image_cropper.dart';
@@ -25,6 +28,37 @@ class _EditorScreenState extends State<EditorScreen> {
   EditorTab _selectedTab = EditorTab.adjust;
   AdjustmentType? _activeAdjustment;
   bool _showRadialDial = false;
+  BannerAd? _bannerAd;
+  bool _isBannerAdLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerAd();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
+  }
+
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: AdService.bannerAdUnitId,
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() => _isBannerAdLoaded = true);
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+        },
+      ),
+    )..load();
+  }
+
 
   void _showExitConfirmation(BuildContext context, EditorState state) {
     if (!state.hasChanges) {
@@ -90,6 +124,8 @@ class _EditorScreenState extends State<EditorScreen> {
                 duration: const Duration(seconds: 2),
               ),
             );
+            // Show interstitial ad after save
+            AdService().showInterstitialAd();
           } else if (state.status == EditorStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -135,6 +171,12 @@ class _EditorScreenState extends State<EditorScreen> {
                       ),
                       _buildToolBar(context, state),
                       _buildToolPanel(context, state),
+                      if (_isBannerAdLoaded && _bannerAd != null && !PurchaseService().isPremium)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: AdWidget(ad: _bannerAd!),
+                        ),
                       _buildActionBar(context, state),
                     ],
                   ),

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'core/services/ad_service.dart';
+import 'core/services/purchase_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/home/screens/home_screen.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AdService().initialize();
+  await PurchaseService().initialize();
   
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
