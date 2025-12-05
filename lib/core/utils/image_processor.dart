@@ -451,9 +451,10 @@ class ImageProcessor {
   static img.Image _applyBeautyFilter(img.Image src, double smoothIntensity, double blemishIntensity) {
     if (smoothIntensity <= 0 && blemishIntensity <= 0) return src;
     
+    // Use bilateral-like filtering: smooth while preserving edges
+    final intensity = ((smoothIntensity + blemishIntensity) / 200 * 0.6).clamp(0.0, 0.6);
     final blurRadius = 5;
     final blurred = img.gaussianBlur(img.Image.from(src), radius: blurRadius);
-    final blend = ((smoothIntensity + blemishIntensity) / 200 * 0.7).clamp(0.0, 0.7);
     
     for (int y = 0; y < src.height; y++) {
       for (int x = 0; x < src.width; x++) {
@@ -464,12 +465,19 @@ class ImageProcessor {
         final g = pixel.g.toDouble();
         final b = pixel.b.toDouble();
         
-        // Quick skin check - red must dominate
-        if (r < 60 || r < g || r < b) continue;
+        // Simple skin check - works in shadows too
+        // Skin has warm tones: R >= G >= B typically
+        final isWarmTone = r >= g * 0.95 && g >= b * 0.9;
+        if (!isWarmTone) continue;
         
-        final finalR = r * (1 - blend) + blur.r * blend;
-        final finalG = g * (1 - blend) + blur.g * blend;
-        final finalB = b * (1 - blend) + blur.b * blend;
+        // Skip very dark (hair) or very bright (specular)
+        final lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        if (lum < 25 || lum > 250) continue;
+        
+        // Blend uniformly - let the blur handle the smoothing
+        final finalR = r * (1 - intensity) + blur.r * intensity;
+        final finalG = g * (1 - intensity) + blur.g * intensity;
+        final finalB = b * (1 - intensity) + blur.b * intensity;
         
         src.setPixelRgba(
           x, y,

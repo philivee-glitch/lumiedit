@@ -317,61 +317,66 @@ class _EditorScreenState extends State<EditorScreen> {
                             builder: (context, constraints) {
                               if (_isRetouchMode) {
                                 final imageData = state.processedImageBytes ?? state.imageBytes!;
-                                return Stack(
-                                  children: [
-                                    GestureDetector(
-                                      onTapDown: (details) {
-                                        setState(() {
-                                          _lastTapPosition = details.localPosition;
-                                        });
-                                        
-                                        final localPos = details.localPosition;
-                                        final containerWidth = constraints.maxWidth;
-                                        final containerHeight = constraints.maxHeight;
-                                        
-                                        final normalizedX = (localPos.dx / containerWidth).clamp(0.0, 1.0);
-                                        final normalizedY = (localPos.dy / containerHeight).clamp(0.0, 1.0);
-                                        
-                                        print("Tap at pixel: ${localPos.dx}, ${localPos.dy}");
-                                        print("Container: $containerWidth x $containerHeight");
-                                        print("Normalized: $normalizedX, $normalizedY");
-                                        
-                                        context.read<EditorBloc>().add(RetouchSpotEvent(
-                                          x: normalizedX,
-                                          y: normalizedY,
-                                          brushSize: _retouchBrushSize,
-                                          intensity: _retouchIntensity,
-                                        ));
-                                        HapticFeedback.lightImpact();
-                                        
-                                        // Clear indicator after delay
-                                        Future.delayed(const Duration(milliseconds: 500), () {
-                                          if (mounted) setState(() => _lastTapPosition = null);
-                                        });
-                                      },
-                                      child: Image.memory(
-                                        imageData,
-                                        fit: BoxFit.fill,
+                                return GestureDetector(
+                                  onTapDown: (details) {
+                                    final localPos = details.localPosition;
+                                    final containerWidth = constraints.maxWidth;
+                                    final containerHeight = constraints.maxHeight;
+                                    
+                                    setState(() {
+                                      _lastTapPosition = localPos;
+                                    });
+                                    
+                                    // Map tap to full container (image fills it)
+                                    final normalizedX = (localPos.dx / containerWidth).clamp(0.0, 1.0);
+                                    final normalizedY = (localPos.dy / containerHeight).clamp(0.0, 1.0);
+                                    
+                                    context.read<EditorBloc>().add(RetouchSpotEvent(
+                                      x: normalizedX,
+                                      y: normalizedY,
+                                      brushSize: _retouchBrushSize,
+                                      intensity: _retouchIntensity,
+                                    ));
+                                    HapticFeedback.lightImpact();
+                                    
+                                    Future.delayed(const Duration(milliseconds: 400), () {
+                                      if (mounted) setState(() => _lastTapPosition = null);
+                                    });
+                                  },
+                                  child: Stack(
+                                    children: [
+                                      SizedBox(
                                         width: constraints.maxWidth,
                                         height: constraints.maxHeight,
-                                        gaplessPlayback: true,
-                                      ),
-                                    ),
-                                    if (_lastTapPosition != null)
-                                      Positioned(
-                                        left: _lastTapPosition!.dx - _retouchBrushSize / 2,
-                                        top: _lastTapPosition!.dy - _retouchBrushSize / 2,
-                                        child: Container(
-                                          width: _retouchBrushSize,
-                                          height: _retouchBrushSize,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            border: Border.all(color: AppTheme.primaryOrange, width: 2),
-                                            color: AppTheme.primaryOrange.withOpacity(0.3),
+                                        child: FittedBox(
+                                          fit: BoxFit.fill,
+                                          child: SizedBox(
+                                            width: constraints.maxWidth,
+                                            height: constraints.maxHeight,
+                                            child: Image.memory(
+                                              imageData,
+                                              fit: BoxFit.fill,
+                                              gaplessPlayback: true,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                  ],
+                                      if (_lastTapPosition != null)
+                                        Positioned(
+                                          left: _lastTapPosition!.dx - _retouchBrushSize / 2,
+                                          top: _lastTapPosition!.dy - _retouchBrushSize / 2,
+                                          child: Container(
+                                            width: _retouchBrushSize,
+                                            height: _retouchBrushSize,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(color: AppTheme.primaryOrange, width: 2),
+                                              color: AppTheme.primaryOrange.withOpacity(0.3),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 );
                               } else {
                                 return InteractiveViewer(
@@ -985,84 +990,55 @@ class _EditorScreenState extends State<EditorScreen> {
 
   Widget _buildBrushSizeSlider() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       color: AppTheme.backgroundMedium,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              SizedBox(
-                width: 60,
-                child: Text(
-                  'Size',
-                  style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary),
-                ),
-              ),
+              Text('Size', style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary, fontSize: 10)),
               Expanded(
-                child: Slider(
-                  value: _retouchBrushSize,
-                  min: 10,
-                  max: 100,
-                  activeColor: AppTheme.primaryOrange,
-                  inactiveColor: AppTheme.surfaceLight,
-                  onChanged: (value) {
-                    setState(() {
-                      _retouchBrushSize = value;
-                    });
-                  },
-                ),
-              ),
-              Container(
-                width: 40,
-                alignment: Alignment.center,
-                child: Text(
-                  '${_retouchBrushSize.round()}',
-                  style: AppTheme.bodyMedium.copyWith(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.w600,
+                child: SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: 2,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                  ),
+                  child: Slider(
+                    value: _retouchBrushSize,
+                    min: 10,
+                    max: 100,
+                    activeColor: AppTheme.primaryOrange,
+                    inactiveColor: AppTheme.surfaceLight,
+                    onChanged: (value) => setState(() => _retouchBrushSize = value),
                   ),
                 ),
               ),
-            ],
-          ),
-          Row(
-            children: [
-              SizedBox(
-                width: 60,
-                child: Text(
-                  'Intensity',
-                  style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary),
-                ),
-              ),
+              SizedBox(width: 28, child: Text('${_retouchBrushSize.round()}', style: AppTheme.labelSmall.copyWith(color: AppTheme.textPrimary), textAlign: TextAlign.right)),
+              const SizedBox(width: 12),
+              Text('Int', style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary, fontSize: 10)),
               Expanded(
-                child: Slider(
-                  value: _retouchIntensity,
-                  min: 0.3,
-                  max: 1.0,
-                  activeColor: AppTheme.primaryOrange,
-                  inactiveColor: AppTheme.surfaceLight,
-                  onChanged: (value) {
-                    setState(() {
-                      _retouchIntensity = value;
-                    });
-                  },
-                ),
-              ),
-              Container(
-                width: 40,
-                alignment: Alignment.center,
-                child: Text(
-                  '${(_retouchIntensity * 100).round()}%',
-                  style: AppTheme.bodyMedium.copyWith(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.w600,
+                child: SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: 2,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                  ),
+                  child: Slider(
+                    value: _retouchIntensity,
+                    min: 0.3,
+                    max: 1.0,
+                    activeColor: AppTheme.primaryOrange,
+                    inactiveColor: AppTheme.surfaceLight,
+                    onChanged: (value) => setState(() => _retouchIntensity = value),
                   ),
                 ),
               ),
+              SizedBox(width: 32, child: Text('${(_retouchIntensity * 100).round()}%', style: AppTheme.labelSmall.copyWith(color: AppTheme.textPrimary), textAlign: TextAlign.right)),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -1072,16 +1048,13 @@ class _EditorScreenState extends State<EditorScreen> {
                   HapticFeedback.lightImpact();
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(color: AppTheme.surfaceLight, borderRadius: BorderRadius.circular(6)),
                   child: Row(
                     children: [
-                      Icon(Icons.undo_rounded, color: AppTheme.textSecondary, size: 18),
-                      const SizedBox(width: 6),
-                      Text('Undo', style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary)),
+                      Icon(Icons.undo_rounded, color: AppTheme.textSecondary, size: 16),
+                      const SizedBox(width: 4),
+                      Text('Undo', style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -1093,16 +1066,13 @@ class _EditorScreenState extends State<EditorScreen> {
                   HapticFeedback.mediumImpact();
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(color: AppTheme.surfaceLight, borderRadius: BorderRadius.circular(6)),
                   child: Row(
                     children: [
-                      Icon(Icons.refresh_rounded, color: AppTheme.textSecondary, size: 18),
-                      const SizedBox(width: 6),
-                      Text('Reset All', style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary)),
+                      Icon(Icons.refresh_rounded, color: AppTheme.textSecondary, size: 16),
+                      const SizedBox(width: 4),
+                      Text('Reset', style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -1113,16 +1083,13 @@ class _EditorScreenState extends State<EditorScreen> {
                   HapticFeedback.lightImpact();
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  decoration: BoxDecoration(gradient: AppTheme.primaryGradient, borderRadius: BorderRadius.circular(6)),
                   child: Row(
                     children: [
-                      Icon(Icons.check_rounded, color: Colors.white, size: 18),
-                      const SizedBox(width: 6),
-                      Text('Done', style: AppTheme.labelSmall.copyWith(color: Colors.white)),
+                      Icon(Icons.check_rounded, color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
+                      Text('Done', style: AppTheme.labelSmall.copyWith(color: Colors.white, fontSize: 11)),
                     ],
                   ),
                 ),
