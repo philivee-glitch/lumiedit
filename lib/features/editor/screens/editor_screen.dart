@@ -28,6 +28,10 @@ class _EditorScreenState extends State<EditorScreen> {
   EditorTab _selectedTab = EditorTab.adjust;
   AdjustmentType? _activeAdjustment;
   bool _showRadialDial = false;
+  bool _isRetouchMode = false;
+  double _retouchBrushSize = 25;
+  Offset? _lastTapPosition;
+  double _retouchIntensity = 0.7;
   BannerAd? _bannerAd;
   bool _isBannerAdLoaded = false;
 
@@ -171,6 +175,7 @@ class _EditorScreenState extends State<EditorScreen> {
                       ),
                       _buildToolBar(context, state),
                       _buildToolPanel(context, state),
+                      if (_isRetouchMode) _buildBrushSizeSlider(),
                       if (_isBannerAdLoaded && _bannerAd != null && !PurchaseService().isPremium)
                         SizedBox(
                           width: double.infinity,
@@ -308,14 +313,78 @@ class _EditorScreenState extends State<EditorScreen> {
                             originalImage: state.imageBytes!,
                             editedImage: state.processedImageBytes ?? state.imageBytes!,
                           )
-                        : InteractiveViewer(
-                            minScale: 1.0,
-                            maxScale: 5.0,
-                            child: Image.memory(
-                              state.processedImageBytes ?? state.imageBytes!,
-                              fit: BoxFit.contain,
-                              gaplessPlayback: true,
-                            ),
+                        : LayoutBuilder(
+                            builder: (context, constraints) {
+                              if (_isRetouchMode) {
+                                final imageData = state.processedImageBytes ?? state.imageBytes!;
+                                return Stack(
+                                  children: [
+                                    GestureDetector(
+                                      onTapDown: (details) {
+                                        setState(() {
+                                          _lastTapPosition = details.localPosition;
+                                        });
+                                        
+                                        final localPos = details.localPosition;
+                                        final containerWidth = constraints.maxWidth;
+                                        final containerHeight = constraints.maxHeight;
+                                        
+                                        final normalizedX = (localPos.dx / containerWidth).clamp(0.0, 1.0);
+                                        final normalizedY = (localPos.dy / containerHeight).clamp(0.0, 1.0);
+                                        
+                                        print("Tap at pixel: ${localPos.dx}, ${localPos.dy}");
+                                        print("Container: $containerWidth x $containerHeight");
+                                        print("Normalized: $normalizedX, $normalizedY");
+                                        
+                                        context.read<EditorBloc>().add(RetouchSpotEvent(
+                                          x: normalizedX,
+                                          y: normalizedY,
+                                          brushSize: _retouchBrushSize,
+                                          intensity: _retouchIntensity,
+                                        ));
+                                        HapticFeedback.lightImpact();
+                                        
+                                        // Clear indicator after delay
+                                        Future.delayed(const Duration(milliseconds: 500), () {
+                                          if (mounted) setState(() => _lastTapPosition = null);
+                                        });
+                                      },
+                                      child: Image.memory(
+                                        imageData,
+                                        fit: BoxFit.fill,
+                                        width: constraints.maxWidth,
+                                        height: constraints.maxHeight,
+                                        gaplessPlayback: true,
+                                      ),
+                                    ),
+                                    if (_lastTapPosition != null)
+                                      Positioned(
+                                        left: _lastTapPosition!.dx - _retouchBrushSize / 2,
+                                        top: _lastTapPosition!.dy - _retouchBrushSize / 2,
+                                        child: Container(
+                                          width: _retouchBrushSize,
+                                          height: _retouchBrushSize,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: AppTheme.primaryOrange, width: 2),
+                                            color: AppTheme.primaryOrange.withOpacity(0.3),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              } else {
+                                return InteractiveViewer(
+                                  minScale: 1.0,
+                                  maxScale: 5.0,
+                                  child: Image.memory(
+                                    state.processedImageBytes ?? state.imageBytes!,
+                                    fit: BoxFit.contain,
+                                    gaplessPlayback: true,
+                                  ),
+                                );
+                              }
+                            },
                           )
                     : _buildImagePlaceholder(context),
               ),
@@ -640,6 +709,56 @@ class _EditorScreenState extends State<EditorScreen> {
             isProcessing: false,
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: GestureDetector(
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              setState(() {
+                _isRetouchMode = !_isRetouchMode;
+              });
+              if (_isRetouchMode) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Tap on blemishes to remove them'),
+                    backgroundColor: AppTheme.primaryOrange,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: _isRetouchMode ? AppTheme.primaryOrange : AppTheme.surfaceLight,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isRetouchMode ? AppTheme.primaryOrange : AppTheme.surfaceLight,
+                  width: 2,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.auto_fix_high_rounded,
+                    color: _isRetouchMode ? Colors.white : AppTheme.textSecondary,
+                    size: 28,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Retouch',
+                    style: AppTheme.labelSmall.copyWith(
+                      color: _isRetouchMode ? Colors.white : AppTheme.textSecondary,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         Expanded(
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
@@ -857,6 +976,158 @@ class _EditorScreenState extends State<EditorScreen> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildBrushSizeSlider() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      color: AppTheme.backgroundMedium,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 60,
+                child: Text(
+                  'Size',
+                  style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary),
+                ),
+              ),
+              Expanded(
+                child: Slider(
+                  value: _retouchBrushSize,
+                  min: 10,
+                  max: 100,
+                  activeColor: AppTheme.primaryOrange,
+                  inactiveColor: AppTheme.surfaceLight,
+                  onChanged: (value) {
+                    setState(() {
+                      _retouchBrushSize = value;
+                    });
+                  },
+                ),
+              ),
+              Container(
+                width: 40,
+                alignment: Alignment.center,
+                child: Text(
+                  '${_retouchBrushSize.round()}',
+                  style: AppTheme.bodyMedium.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              SizedBox(
+                width: 60,
+                child: Text(
+                  'Intensity',
+                  style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary),
+                ),
+              ),
+              Expanded(
+                child: Slider(
+                  value: _retouchIntensity,
+                  min: 0.3,
+                  max: 1.0,
+                  activeColor: AppTheme.primaryOrange,
+                  inactiveColor: AppTheme.surfaceLight,
+                  onChanged: (value) {
+                    setState(() {
+                      _retouchIntensity = value;
+                    });
+                  },
+                ),
+              ),
+              Container(
+                width: 40,
+                alignment: Alignment.center,
+                child: Text(
+                  '${(_retouchIntensity * 100).round()}%',
+                  style: AppTheme.bodyMedium.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  context.read<EditorBloc>().add(UndoEvent());
+                  HapticFeedback.lightImpact();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.undo_rounded, color: AppTheme.textSecondary, size: 18),
+                      const SizedBox(width: 6),
+                      Text('Undo', style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary)),
+                    ],
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  context.read<EditorBloc>().add(ResetAdjustmentsEvent());
+                  setState(() => _isRetouchMode = false);
+                  HapticFeedback.mediumImpact();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.refresh_rounded, color: AppTheme.textSecondary, size: 18),
+                      const SizedBox(width: 6),
+                      Text('Reset All', style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary)),
+                    ],
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  setState(() => _isRetouchMode = false);
+                  HapticFeedback.lightImpact();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                      const SizedBox(width: 6),
+                      Text('Done', style: AppTheme.labelSmall.copyWith(color: Colors.white)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

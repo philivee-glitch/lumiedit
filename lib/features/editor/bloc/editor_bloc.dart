@@ -29,6 +29,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     on<CropImageEvent>(_onCropImage);
     on<RotateImageEvent>(_onRotateImage);
     on<FlipImageEvent>(_onFlipImage);
+    on<RetouchSpotEvent>(_onRetouchSpot);
   }
 
   @override
@@ -462,6 +463,38 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
       emit(state.copyWith(
         status: EditorStatus.error,
         errorMessage: 'Failed to flip image: $e',
+      ));
+    }
+  }
+
+
+  Future<void> _onRetouchSpot(
+    RetouchSpotEvent event,
+    Emitter<EditorState> emit,
+  ) async {
+    print("Retouch handler called at ${event.x}, ${event.y}");
+    final sourceBytes = state.processedImageBytes ?? state.imageBytes;
+    if (sourceBytes == null) return;
+    emit(state.copyWith(status: EditorStatus.processing));
+    try {
+      final retouchedBytes = await ImageProcessor.retouchSpot(
+        sourceBytes,
+        event.x,
+        event.y,
+        event.brushSize,
+        event.intensity,
+      );
+      print("Retouch completed");
+      
+      emit(state.copyWith(
+        status: EditorStatus.loaded,
+        processedImageBytes: retouchedBytes,
+      ));
+    } catch (e) {
+      print("Retouch error: $e");
+      emit(state.copyWith(
+        status: EditorStatus.error,
+        errorMessage: 'Failed to retouch: $e',
       ));
     }
   }

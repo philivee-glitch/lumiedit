@@ -48,6 +48,16 @@ class ProcessingParams {
   }
 }
 
+class RetouchParams {
+  final Uint8List imageBytes;
+  final double normalizedX;
+  final double normalizedY;
+  final double brushSize;
+  final double intensity;
+
+  RetouchParams(this.imageBytes, this.normalizedX, this.normalizedY, this.brushSize, this.intensity);
+}
+
 class ImageProcessor {
   static Future<Uint8List> processImage(
     Uint8List imageBytes,
@@ -632,5 +642,80 @@ class ImageProcessor {
         : img.flipVertical(image);
     
     return Uint8List.fromList(img.encodeJpg(flipped, quality: 95));
+  }
+
+
+  /// Heal a specific spot by blending with surrounding pixels
+  static Future<Uint8List> retouchSpot(
+    Uint8List imageBytes,
+    double normalizedX,
+    double normalizedY,
+    double brushSize,
+    double intensity,
+  ) async {
+    return compute(_retouchSpotIsolate, RetouchParams(imageBytes, normalizedX, normalizedY, brushSize, intensity));
+  }
+
+  static Uint8List _retouchSpotIsolate(RetouchParams params) {
+    img.Image? image = img.decodeImage(params.imageBytes);
+    if (image == null) return params.imageBytes;
+
+    final centerX = (params.normalizedX * image.width).round();
+    final centerY = (params.normalizedY * image.height).round();
+    final radius = params.brushSize.round();
+
+    // Get surrounding color (ring around the spot)
+    double avgR = 0, avgG = 0, avgB = 0;
+    int count = 0;
+    
+    for (int dy = -radius - 5; dy <= radius + 5; dy++) {
+      for (int dx = -radius - 5; dx <= radius + 5; dx++) {
+        final dist = math.sqrt(dx * dx + dy * dy);
+        // Sample from ring just outside the brush
+        if (dist >= radius && dist <= radius + 8) {
+          final px = centerX + dx;
+          final py = centerY + dy;
+          if (px >= 0 && px < image.width && py >= 0 && py < image.height) {
+            final pixel = image.getPixel(px, py);
+            avgR += pixel.r;
+            avgG += pixel.g;
+            avgB += pixel.b;
+            count++;
+          }
+        }
+      }
+    }
+
+    if (count == 0) return params.imageBytes;
+
+    avgR /= count;
+    avgG /= count;
+    avgB /= count;
+
+    // Apply healing within the brush radius
+    for (int dy = -radius; dy <= radius; dy++) {
+      for (int dx = -radius; dx <= radius; dx++) {
+        final dist = math.sqrt(dx * dx + dy * dy);
+        if (dist <= radius) {
+          final px = centerX + dx;
+          final py = centerY + dy;
+          if (px >= 0 && px < image.width && py >= 0 && py < image.height) {
+            final pixel = image.getPixel(px, py);
+            
+            // Smooth falloff from center
+            final falloff = 1.0 - (dist / radius);
+            final blend = falloff * params.intensity;
+            
+            final newR = (pixel.r * (1 - blend) + avgR * blend).round().clamp(0, 255);
+            final newG = (pixel.g * (1 - blend) + avgG * blend).round().clamp(0, 255);
+            final newB = (pixel.b * (1 - blend) + avgB * blend).round().clamp(0, 255);
+            
+            image.setPixelRgba(px, py, newR, newG, newB, pixel.a.toInt());
+          }
+        }
+      }
+    }
+
+    return Uint8List.fromList(img.encodeJpg(image, quality: 95));
   }
 }

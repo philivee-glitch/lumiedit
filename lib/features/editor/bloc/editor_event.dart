@@ -87,3 +87,20 @@ class FlipImageEvent extends EditorEvent {
   @override
   List<Object?> get props => [horizontal];
 }
+
+class RetouchSpotEvent extends EditorEvent {
+  final double x; // normalized 0-1
+  final double y; // normalized 0-1
+  final double brushSize;
+  final double intensity;
+  
+  const RetouchSpotEvent({
+    required this.x,
+    required this.y,
+    this.brushSize = 30,
+    this.intensity = 0.7,
+  });
+  
+  @override
+  List<Object?> get props => [x, y, brushSize, intensity];
+}
