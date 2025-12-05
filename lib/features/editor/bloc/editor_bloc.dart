@@ -30,6 +30,7 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     on<RotateImageEvent>(_onRotateImage);
     on<FlipImageEvent>(_onFlipImage);
     on<RetouchSpotEvent>(_onRetouchSpot);
+    on<RestoreImageEvent>(_onRestoreImage);
   }
 
   @override
@@ -497,5 +498,16 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
         errorMessage: 'Failed to retouch: $e',
       ));
     }
+  }
+
+
+  Future<void> _onRestoreImage(
+    RestoreImageEvent event,
+    Emitter<EditorState> emit,
+  ) async {
+    emit(state.copyWith(
+      status: EditorStatus.loaded,
+      processedImageBytes: event.imageBytes,
+    ));
   }
 }

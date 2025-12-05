@@ -32,6 +32,8 @@ class _EditorScreenState extends State<EditorScreen> {
   double _retouchBrushSize = 25;
   Offset? _lastTapPosition;
   double _retouchIntensity = 0.7;
+  List<Uint8List> _retouchHistory = [];
+  int _retouchHistoryIndex = -1;
   BannerAd? _bannerAd;
   bool _isBannerAdLoaded = false;
 
@@ -175,7 +177,7 @@ class _EditorScreenState extends State<EditorScreen> {
                       ),
                       _buildToolBar(context, state),
                       _buildToolPanel(context, state),
-                      if (_isRetouchMode) _buildBrushSizeSlider(),
+                      if (_isRetouchMode) _buildBrushSizeSlider(context),
                       if (_isBannerAdLoaded && _bannerAd != null && !PurchaseService().isPremium)
                         SizedBox(
                           width: double.infinity,
@@ -317,65 +319,72 @@ class _EditorScreenState extends State<EditorScreen> {
                             builder: (context, constraints) {
                               if (_isRetouchMode) {
                                 final imageData = state.processedImageBytes ?? state.imageBytes!;
-                                return GestureDetector(
-                                  onTapDown: (details) {
-                                    final localPos = details.localPosition;
-                                    final containerWidth = constraints.maxWidth;
-                                    final containerHeight = constraints.maxHeight;
-                                    
-                                    setState(() {
-                                      _lastTapPosition = localPos;
-                                    });
-                                    
-                                    // Map tap to full container (image fills it)
-                                    final normalizedX = (localPos.dx / containerWidth).clamp(0.0, 1.0);
-                                    final normalizedY = (localPos.dy / containerHeight).clamp(0.0, 1.0);
-                                    
-                                    context.read<EditorBloc>().add(RetouchSpotEvent(
-                                      x: normalizedX,
-                                      y: normalizedY,
-                                      brushSize: _retouchBrushSize,
-                                      intensity: _retouchIntensity,
-                                    ));
-                                    HapticFeedback.lightImpact();
-                                    
-                                    Future.delayed(const Duration(milliseconds: 400), () {
-                                      if (mounted) setState(() => _lastTapPosition = null);
-                                    });
-                                  },
-                                  child: Stack(
-                                    children: [
-                                      SizedBox(
-                                        width: constraints.maxWidth,
-                                        height: constraints.maxHeight,
-                                        child: FittedBox(
-                                          fit: BoxFit.fill,
-                                          child: SizedBox(
-                                            width: constraints.maxWidth,
-                                            height: constraints.maxHeight,
-                                            child: Image.memory(
-                                              imageData,
-                                              fit: BoxFit.fill,
-                                              gaplessPlayback: true,
-                                            ),
+                                // Initialize history when entering retouch mode
+                                if (_retouchHistory.isEmpty) {
+                                  _retouchHistory = [imageData];
+                                  _retouchHistoryIndex = 0;
+                                }
+                                return InteractiveViewer(
+                                  minScale: 1.0,
+                                  maxScale: 5.0,
+                                  child: GestureDetector(
+                                    onTapDown: (details) {
+                                      final localPos = details.localPosition;
+                                      final containerWidth = constraints.maxWidth;
+                                      final containerHeight = constraints.maxHeight;
+                                      
+                                      setState(() {
+                                        _lastTapPosition = localPos;
+                                        // Save current state to history before edit
+                                        if (_retouchHistoryIndex < _retouchHistory.length - 1) {
+                                          _retouchHistory = _retouchHistory.sublist(0, _retouchHistoryIndex + 1);
+                                        }
+                                        _retouchHistory.add(imageData);
+                                        _retouchHistoryIndex = _retouchHistory.length - 1;
+                                      });
+                                      
+                                      final normalizedX = (localPos.dx / containerWidth).clamp(0.0, 1.0);
+                                      final normalizedY = (localPos.dy / containerHeight).clamp(0.0, 1.0);
+                                      
+                                      context.read<EditorBloc>().add(RetouchSpotEvent(
+                                        x: normalizedX,
+                                        y: normalizedY,
+                                        brushSize: _retouchBrushSize,
+                                        intensity: _retouchIntensity,
+                                      ));
+                                      HapticFeedback.lightImpact();
+                                      
+                                      Future.delayed(const Duration(milliseconds: 400), () {
+                                        if (mounted) setState(() => _lastTapPosition = null);
+                                      });
+                                    },
+                                    child: Stack(
+                                      children: [
+                                        SizedBox(
+                                          width: constraints.maxWidth,
+                                          height: constraints.maxHeight,
+                                          child: Image.memory(
+                                            imageData,
+                                            fit: BoxFit.fill,
+                                            gaplessPlayback: true,
                                           ),
                                         ),
-                                      ),
-                                      if (_lastTapPosition != null)
-                                        Positioned(
-                                          left: _lastTapPosition!.dx - _retouchBrushSize / 2,
-                                          top: _lastTapPosition!.dy - _retouchBrushSize / 2,
-                                          child: Container(
-                                            width: _retouchBrushSize,
-                                            height: _retouchBrushSize,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(color: AppTheme.primaryOrange, width: 2),
-                                              color: AppTheme.primaryOrange.withOpacity(0.3),
+                                        if (_lastTapPosition != null)
+                                          Positioned(
+                                            left: _lastTapPosition!.dx - _retouchBrushSize / 2,
+                                            top: _lastTapPosition!.dy - _retouchBrushSize / 2,
+                                            child: Container(
+                                              width: _retouchBrushSize,
+                                              height: _retouchBrushSize,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: AppTheme.primaryOrange, width: 2),
+                                                color: AppTheme.primaryOrange.withOpacity(0.3),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 );
                               } else {
@@ -988,7 +997,7 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
 
-  Widget _buildBrushSizeSlider() {
+  Widget _buildBrushSizeSlider(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       color: AppTheme.backgroundMedium,
@@ -1044,26 +1053,41 @@ class _EditorScreenState extends State<EditorScreen> {
             children: [
               GestureDetector(
                 onTap: () {
-                  context.read<EditorBloc>().add(UndoEvent());
-                  HapticFeedback.lightImpact();
+                  if (_retouchHistoryIndex > 0) {
+                    setState(() {
+                      _retouchHistoryIndex--;
+                    });
+                    final previousImage = _retouchHistory[_retouchHistoryIndex];
+                    context.read<EditorBloc>().add(RestoreImageEvent(previousImage));
+                    HapticFeedback.lightImpact();
+                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(color: AppTheme.surfaceLight, borderRadius: BorderRadius.circular(6)),
+                  decoration: BoxDecoration(
+                    color: _retouchHistoryIndex > 0 ? AppTheme.surfaceLight : AppTheme.surfaceLight.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
                   child: Row(
                     children: [
-                      Icon(Icons.undo_rounded, color: AppTheme.textSecondary, size: 16),
+                      Icon(Icons.undo_rounded, color: _retouchHistoryIndex > 0 ? AppTheme.textSecondary : AppTheme.textTertiary, size: 16),
                       const SizedBox(width: 4),
-                      Text('Undo', style: AppTheme.labelSmall.copyWith(color: AppTheme.textSecondary, fontSize: 11)),
+                      Text('Undo', style: AppTheme.labelSmall.copyWith(color: _retouchHistoryIndex > 0 ? AppTheme.textSecondary : AppTheme.textTertiary, fontSize: 11)),
                     ],
                   ),
                 ),
               ),
               GestureDetector(
                 onTap: () {
-                  context.read<EditorBloc>().add(ResetAdjustmentsEvent());
-                  setState(() => _isRetouchMode = false);
-                  HapticFeedback.mediumImpact();
+                  if (_retouchHistory.isNotEmpty) {
+                    final originalImage = _retouchHistory[0];
+                    context.read<EditorBloc>().add(RestoreImageEvent(originalImage));
+                    setState(() {
+                      _retouchHistory = [originalImage];
+                      _retouchHistoryIndex = 0;
+                    });
+                    HapticFeedback.mediumImpact();
+                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -1079,7 +1103,11 @@ class _EditorScreenState extends State<EditorScreen> {
               ),
               GestureDetector(
                 onTap: () {
-                  setState(() => _isRetouchMode = false);
+                  setState(() {
+                    _isRetouchMode = false;
+                    _retouchHistory = [];
+                    _retouchHistoryIndex = -1;
+                  });
                   HapticFeedback.lightImpact();
                 },
                 child: Container(

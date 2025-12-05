@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 import '../../../core/constants/editor_constants.dart';
 
@@ -103,4 +104,13 @@ class RetouchSpotEvent extends EditorEvent {
   
   @override
   List<Object?> get props => [x, y, brushSize, intensity];
+}
+
+class RestoreImageEvent extends EditorEvent {
+  final Uint8List imageBytes;
+  
+  const RestoreImageEvent(this.imageBytes);
+  
+  @override
+  List<Object?> get props => [imageBytes];
 }
