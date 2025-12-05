@@ -308,10 +308,14 @@ class _EditorScreenState extends State<EditorScreen> {
                             originalImage: state.imageBytes!,
                             editedImage: state.processedImageBytes ?? state.imageBytes!,
                           )
-                        : Image.memory(
-                            state.processedImageBytes ?? state.imageBytes!,
-                            fit: BoxFit.contain,
-                            gaplessPlayback: true,
+                        : InteractiveViewer(
+                            minScale: 1.0,
+                            maxScale: 5.0,
+                            child: Image.memory(
+                              state.processedImageBytes ?? state.imageBytes!,
+                              fit: BoxFit.contain,
+                              gaplessPlayback: true,
+                            ),
                           )
                     : _buildImagePlaceholder(context),
               ),
